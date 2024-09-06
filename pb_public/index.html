@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>PB CRM QuickEdit</title>
+    <meta charset="UTF-8" />
+    <script type="text/javascript"
+        src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.5/dist/pocketbase.umd.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" />
+</head>
+
+<body>
+    <div id="datatable"></div>
+    <button id="saveButton">Save</button>
+    <script>
+        function emailValidator(value, callback) {
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            callback(emailPattern.test(value));
+        }
+
+        async function main() {
+            const pb = new PocketBase(window.location.protocol + '//' + window.location.host);
+            pb.authStore.storageKey = 'pb_admin_auth';
+
+            let records;
+            try {
+                records = await pb.collection('contacts').getFullList();
+            } catch (error) {
+                window.location.href = '/_';
+                return;
+            }
+            let initialIds = records.map(record => record.id);
+            const container = document.querySelector('#datatable');
+            const hot = new Handsontable(container, {
+                data: records,
+                colHeaders: ['ID', 'Prénom', 'Nom', 'Email', 'Matricule', 'Titre', 'Info'],
+                columns: [
+                    { data: 'id' },
+                    { data: 'firstname' },
+                    { data: 'lastname' },
+                    { data: 'email', validator: emailValidator },
+                    { data: 'matricule' },
+                    { data: 'title' },
+                    { data: 'info' },
+                ],
+                height: 'auto',
+                width: 'auto',
+                rowHeaders: true,
+                allowInsertColumn: false,
+                contextMenu: true,
+                minSpareRows: 1,
+                licenseKey: 'non-commercial-and-evaluation'
+            });
+
+            document.getElementById('saveButton').addEventListener('click', async () => {
+                const data = hot.getData();
+                const currentIds = data.map(row => row[0]);
+                const newRecords = data.filter(row => !initialIds.includes(row[0]));
+                const updatedRecords = data.filter(row => initialIds.includes(row[0]));
+                const deletedIds = initialIds.filter(id => !currentIds.includes(id));
+
+                for (const record of newRecords) {
+                    // skip empty rows
+                    if (record.slice(0).every(cell => cell === '' || cell === null)) {
+                        continue;
+                    }
+                    await pb.collection('contacts').create({
+                        firstname: record[1],
+                        lastname: record[2],
+                        email: record[3],
+                        matricule: record[4],
+                        title: record[5],
+                        info: record[6]
+                    });
+                }
+
+                for (const record of updatedRecords) {
+                    await pb.collection('contacts').update(record[0], {
+                        firstname: record[1],
+                        lastname: record[2],
+                        email: record[3],
+                        matricule: record[4],
+                        title: record[5],
+                        info: record[6]
+                    });
+                }
+
+                for (const id of deletedIds) {
+                    await pb.collection('contacts').delete(id);
+                }
+                // Refresh the initialIds
+                const records = await pb.collection('contacts').getFullList();
+                initialIds = records.map(record => record.id);
+                hot.loadData(records);
+            });
+        }
+        main();
+    </script>
+</body>
+
+</html>

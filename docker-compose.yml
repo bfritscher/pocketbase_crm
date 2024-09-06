@@ -1,0 +1,5 @@
+services:
+  pb:
+    build: .
+    volumes:
+      - ./pb_data:/pb_data
