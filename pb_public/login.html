@@ -15,8 +15,9 @@
         <li>Loading OAuth2 providers...</li>
     </ul>
     <script>
- const pb = new PocketBase('http://127.0.0.1:8090');
-        const redirectUrl = 'http://127.0.0.1:8090/redirect.html';
+        const baseUrl = `${window.location.protocol}//${window.location.host}`;
+        const pb = new PocketBase(baseUrl);
+        const redirectUrl = `${baseUrl}/redirect.html`;
 
         async function loadLinks() {
             const authMethods = await pb.collection('users').listAuthMethods();
@@ -26,7 +27,7 @@
             for (const provider of authMethods.authProviders) {
                 const li = document.createElement('li');
                 li.innerHTML = `<a href="${provider.authUrl + redirectUrl}">Login with ${provider.displayName}</a>`;
-                li.addEventListener('click', function () {
+                li.children[0].addEventListener('click', function () {
                     localStorage.setItem('provider', JSON.stringify(provider));
                 });
                 list.appendChild(li);
