@@ -41,12 +41,13 @@ function wait(milliseconds) {
 
 async function download(url, filename) {
   const a = document.createElement("a");
-  a.href = await toDataURL(url);
+  const data = await toDataURL(url);
+  a.href = data;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  return;
+  return data;
 }
 
 async function parse(PocketBase) {
@@ -83,7 +84,14 @@ async function parse(PocketBase) {
   }
   for (let i = 0; i < imgs.length; i++) {
     console.log('download', student);
-    await download(imgs[i], `${students[i].matricule_isa}.jpg`);
+    const photo = await download(imgs[i], `${students[i].matricule_isa}.jpg`);
+    try {
+      await pb.collection("photos").create({
+        matricule: students[i].matricule_isa,
+        base64: photo,
+      });
+    } catch (e) {
+    }
     await wait(500);
     console.log('done');
   }

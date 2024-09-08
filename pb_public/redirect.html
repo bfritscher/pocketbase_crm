@@ -8,7 +8,6 @@
     <pre id="content">Authenticating...</pre>
 
     <script src="https://cdn.jsdelivr.net/gh/pocketbase/js-sdk@master/dist/pocketbase.umd.js"></script>
-    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
     <script type="text/javascript">
         const baseUrl = `${window.location.protocol}//${window.location.host}`;
         const pb = new PocketBase(baseUrl);
@@ -37,11 +36,10 @@
         ).then((authData) => {
             const payload = JSON.stringify(authData, null, 2);
             document.getElementById('content').innerText = payload;
-
-            Office.onReady((info) => {
-                Office.context.ui.messageParent(payload);
-                console.log('Message sent to parent window.');
-            });
+            const replyTo = localStorage.getItem('reply_to');
+            if (replyTo) {
+                window.location.href = `${replyTo}?token=${authData.token}`;
+            }
         }).catch((err) => {
             document.getElementById('content').innerText = "Failed to exchange code.\n" + err;
         });

@@ -17,10 +17,21 @@
     <script>
         const baseUrl = `${window.location.protocol}//${window.location.host}`;
         const pb = new PocketBase(baseUrl);
+        const url = new URL(window.location);
+        const params = url.searchParams;
+        const replyTo = params.get('reply_to');
+        if (replyTo) {
+            localStorage.setItem('reply_to', replyTo);
+        }
         const redirectUrl = `${baseUrl}/redirect.html`;
 
         async function loadLinks() {
             const authMethods = await pb.collection('users').listAuthMethods();
+            if (authMethods.authProviders.length === 1) {
+                localStorage.setItem('provider', JSON.stringify(authMethods.authProviders[0]));
+                window.location = authMethods.authProviders[0].authUrl + redirectUrl;
+                return;
+            }
             const listItems = [];
             const list = document.getElementById('list');
             list.innerHTML = '';
@@ -37,18 +48,7 @@
                 list.innerHTML = '<li>No OAuth2 providers.</li>';
             }
         }
-
         loadLinks();
-
-        /*
-        async function main() {
-
-
-            const pb = new PocketBase('http://127.0.0.1:8090');
-            const authData = await pb.collection('users').authWithOAuth2({ provider: 'oidc' });
-        }
-        main();
-        */
     </script>
 </body>
 
