@@ -25,11 +25,14 @@ function getImgs() {
 
 function toDataURL(url) {
   return fetch(url)
-    .then((response) => {
-      return response.blob();
-    })
+    .then((response) => response.blob())
     .then((blob) => {
-      return URL.createObjectURL(blob);
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
     });
 }
 
@@ -51,8 +54,8 @@ async function download(url, filename) {
 }
 
 async function parse(PocketBase) {
-  const pb = new PocketBase("http://127.0.0.1:8090");
-  await pb.admins.authWithPassword("boris.fritscher@he-arc.ch", "PASSWORD");
+  const pb = new PocketBase("https://crm.bf0.ch");
+  await pb.admins.authWithPassword("LOGIN", "PASSWORD");
   const students = getStudents();
   const imgs = getImgs();
   if (imgs.length !== students.length) return console.log("ERROR", imgs.length, students.length);
@@ -65,7 +68,7 @@ async function parse(PocketBase) {
     const data = {
       firstname: student.firstname,
       lastname: student.lastname,
-      email: student.email,
+      email: student.email === '-' ? undefined : student.email,
       matricule: student.matricule_isa,
       title: json.class,
       info: student.status
@@ -73,6 +76,7 @@ async function parse(PocketBase) {
     try {
       await pb.collection("contacts").create(data);
     } catch (e) {
+      console.log(e);
       try {
         const record = await pb.collection('contacts').getFirstListItem(`email="${student.email}"`);
         await pb.collection('contacts').update(record.id, data);
@@ -83,7 +87,7 @@ async function parse(PocketBase) {
     }
   }
   for (let i = 0; i < imgs.length; i++) {
-    console.log('download', student);
+    console.log('download', students[i]);
     const photo = await download(imgs[i], `${students[i].matricule_isa}.jpg`);
     try {
       await pb.collection("photos").create({
